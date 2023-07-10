@@ -1,9 +1,4 @@
-# mesa
-Mesa is a package for creating and running table driven tests
-
-# Example
-```go
-package buffer_test
+package mesa_test
 
 import (
 	"fmt"
@@ -33,7 +28,7 @@ func (a *Buffer) Add(msg Msg) error {
 	return nil
 }
 
-func TestBuffer_Add() {
+func ExampleMesa() {
 	m := mesa.Mesa[*Buffer, int, Msg, error]{
 		NewInstance: func(ctx *mesa.Ctx, limit int) *Buffer {
 			return &Buffer{
@@ -87,6 +82,8 @@ func TestBuffer_Add() {
 		},
 	}
 
+	// Dummy testing variable
+	var t = &testing.T{}
+
 	m.Run(t)
 }
-```
