@@ -28,8 +28,8 @@ func (a *Buffer) Add(msg Msg) error {
 	return nil
 }
 
-func ExampleMesa() {
-	m := mesa.Mesa[*Buffer, int, Msg, error]{
+func ExampleInstanceMesa() {
+	m := mesa.InstanceMesa[*Buffer, int, Msg, error]{
 		NewInstance: func(ctx *mesa.Ctx, limit int) *Buffer {
 			return &Buffer{
 				limit: limit,
@@ -38,7 +38,7 @@ func ExampleMesa() {
 		Target: func(ctx *mesa.Ctx, inst *Buffer, in Msg) error {
 			return inst.Add(in)
 		},
-		Cases: []mesa.Case[*Buffer, int, Msg, error]{
+		Cases: []mesa.InstanceCase[*Buffer, int, Msg, error]{
 			{
 				Name:   "Buffer with limit 10",
 				Fields: 10,
