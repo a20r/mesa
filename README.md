@@ -1,7 +1,14 @@
 # mesa
 Mesa is a package for creating and running table driven tests
 
+# Install
+```
+go get github.com/a20r/mesa
+```
+
 # Example
+
+## Testing a method
 ```go
 package buffer_test
 
