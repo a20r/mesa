@@ -2,6 +2,7 @@ package mesa_test
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/a20r/mesa"
@@ -28,7 +29,7 @@ func (a *Buffer) Add(msg Msg) error {
 	return nil
 }
 
-func ExampleInstanceMesa() {
+func TestInstanceMesa(t *testing.T) {
 	m := mesa.InstanceMesa[*Buffer, int, Msg, error]{
 		NewInstance: func(ctx *mesa.Ctx, limit int) *Buffer {
 			return &Buffer{
@@ -82,8 +83,28 @@ func ExampleInstanceMesa() {
 		},
 	}
 
-	// Dummy testing variable
-	var t = &testing.T{}
+	m.Run(t)
+}
+
+func PowE(x float64) float64 {
+	return math.Pow(math.E, x)
+}
+
+func TestFunctionMesa(t *testing.T) {
+	m := mesa.FunctionMesa[float64, float64]{
+		Target: func(ctx *mesa.Ctx, in float64) float64 {
+			return PowE(in)
+		},
+		Cases: []mesa.FunctionCase[float64, float64]{
+			{
+				Name:  "pow(e, 1)",
+				Input: 1,
+				Check: func(ctx *mesa.Ctx, in, out float64) {
+					ctx.As.InEpsilon(math.E, out, 0.00001)
+				},
+			},
+		},
+	}
 
 	m.Run(t)
 }

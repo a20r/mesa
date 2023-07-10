@@ -16,6 +16,15 @@ type Ctx struct {
 	Re *require.Assertions
 }
 
+// newCtx creates a new testing context with assert and require instances.
+func newCtx(t *testing.T) *Ctx {
+	return &Ctx{
+		T:  t,
+		As: assert.New(t),
+		Re: require.New(t),
+	}
+}
+
 // InstanceCase represents a test case with its associated properties.
 type InstanceCase[InstanceType, FieldsType, InputType, OutputType any] struct {
 	Name       string                                                          // Name of the test case.
@@ -43,29 +52,24 @@ func (m *InstanceMesa[Inst, F, I, O]) Run(t *testing.T) {
 				t.Skip(tt.Skip)
 			}
 
-			re := require.New(t) // Create a new require.Assertions instance.
-			as := assert.New(t)  // Create a new assert.Assertions instance.
+			ctx := newCtx(t)
 
-			ctx := &Ctx{
-				T:  t,
-				As: as,
-				Re: re,
+			inst := m.NewInstance(ctx, tt.Fields)
+
+			if tt.Cleanup != nil {
+				t.Cleanup(func() {
+					tt.Cleanup(ctx, inst)
+				})
 			}
-
-			inst := m.NewInstance(ctx, tt.Fields) // Create a new instance using NewInstance function.
-
-			t.Cleanup(func() {
-				tt.Cleanup(ctx, inst) // Execute the cleanup function after the test case finishes.
-			})
 
 			if tt.BeforeCall != nil {
-				tt.BeforeCall(ctx, inst, tt.Input) // Execute the BeforeCall function before calling the target function.
+				tt.BeforeCall(ctx, inst, tt.Input)
 			}
 
-			out := m.Target(ctx, inst, tt.Input) // Call the target function with the provided input.
+			out := m.Target(ctx, inst, tt.Input)
 
 			if tt.Check != nil {
-				tt.Check(ctx, inst, tt.Input, out) // Check the output of the target function using the Check function.
+				tt.Check(ctx, inst, tt.Input, out)
 			}
 		})
 	}
@@ -83,8 +87,8 @@ type FunctionCase[InputType, OutputType any] struct {
 
 // FunctionMesa represents a collection of test cases executes the target function under each test case.
 type FunctionMesa[InputType, OutputType any] struct {
-	Target func(ctx *Ctx, in InputType) OutputType // Target function under test.
-	Cases  []FunctionCase[InputType, OutputType]   // List of test cases.
+	Target func(ctx *Ctx, in InputType) OutputType
+	Cases  []FunctionCase[InputType, OutputType]
 }
 
 // Run executes all the test cases in the FunctionMesa instance.
@@ -95,27 +99,22 @@ func (m *FunctionMesa[I, O]) Run(t *testing.T) {
 				t.Skip(tt.Skip)
 			}
 
-			re := require.New(t) // Create a new require.Assertions instance.
-			as := assert.New(t)  // Create a new assert.Assertions instance.
+			ctx := newCtx(t)
 
-			ctx := &Ctx{
-				T:  t,
-				As: as,
-				Re: re,
+			if tt.Cleanup != nil {
+				t.Cleanup(func() {
+					tt.Cleanup(ctx)
+				})
 			}
-
-			t.Cleanup(func() {
-				tt.Cleanup(ctx) // Execute the cleanup function after the test case finishes.
-			})
 
 			if tt.BeforeCall != nil {
-				tt.BeforeCall(ctx, tt.Input) // Execute the BeforeCall function before calling the target function.
+				tt.BeforeCall(ctx, tt.Input)
 			}
 
-			out := m.Target(ctx, tt.Input) // Call the target function with the provided input.
+			out := m.Target(ctx, tt.Input)
 
 			if tt.Check != nil {
-				tt.Check(ctx, tt.Input, out) // Check the output of the target function using the Check function.
+				tt.Check(ctx, tt.Input, out)
 			}
 		})
 	}
