@@ -98,9 +98,6 @@ Each `FunctionCase` instance defines the following:
 - [*Override*] `Check`: an optional function to check the output of the target function
 - [*Override*] `Cleanup`: an optional function to execute after the test case finishes
 
-
-Note: You can define global `BeforeCall`, `Check`, and `Cleanup` functions in `MethodMesa` and `FunctionMesa`, but you can also override them in individual test cases by defining the same functions in the `MethodCase` or `FunctionCase` instance.
-
 ### Example
 ```go
 func Add(a, b int) int {
