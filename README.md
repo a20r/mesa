@@ -43,7 +43,7 @@ func (a *Buffer) Add(msg Msg) error {
 }
 
 func TestBuffer_Add(t *testing.T) {
-    m := mesa.InstanceMesa[*Buffer, int, Msg, error]{
+    m := mesa.MethodMesa[*Buffer, int, Msg, error]{
         NewInstance: func(ctx *mesa.Ctx, limit int) *Buffer {
             return &Buffer{
                 limit: limit,
@@ -52,7 +52,7 @@ func TestBuffer_Add(t *testing.T) {
         Target: func(ctx *mesa.Ctx, inst *Buffer, in Msg) error {
             return inst.Add(in)
         },
-        Cases: []mesa.InstanceCase[*Buffer, int, Msg, error]{
+        Cases: []mesa.MethodCase[*Buffer, int, Msg, error]{
             {
                 Name:   "Buffer with limit 10",
                 Fields: 10,

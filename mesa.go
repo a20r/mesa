@@ -38,8 +38,8 @@ func newCtx(t *testing.T) *Ctx {
 	}
 }
 
-// InstanceCase represents a test case with its associated properties.
-type InstanceCase[InstanceType, FieldsType, InputType, OutputType any] struct {
+// MethodCase represents a test case with its associated properties.
+type MethodCase[InstanceType, FieldsType, InputType, OutputType any] struct {
 	// Required: Name of the test case.
 	Name string
 
@@ -53,21 +53,21 @@ type InstanceCase[InstanceType, FieldsType, InputType, OutputType any] struct {
 	Skip string
 
 	// Optional: Function to execute before calling the target function. It will be called instead of the BeforeCall
-	// function in the InstanceMesa if provided.
+	// function in the MethodMesa if provided.
 	BeforeCall func(ctx *Ctx, inst InstanceType, in InputType)
 
 	// Optional: Function to check the output of the target function. It will be called instead of the Check function
-	// in the InstanceMesa if provided.
+	// in the MethodMesa if provided.
 	Check func(ctx *Ctx, inst InstanceType, in InputType, out OutputType)
 
 	// Optional: Cleanup function to execute after the test case finishes. It will be called instead of the Cleanup
-	// function in the InstanceMesa if provided.
+	// function in the MethodMesa if provided.
 	Cleanup func(ctx *Ctx, inst InstanceType)
 }
 
-// InstanceMesa represents a collection of test cases and the functions to create instances
+// MethodMesa represents a collection of test cases and the functions to create instances
 // and execute the target function under test.
-type InstanceMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
+type MethodMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
 	// Required: Function to create a new instance.
 	NewInstance func(ctx *Ctx, fields FieldsType) InstanceType
 
@@ -75,7 +75,7 @@ type InstanceMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
 	Target func(ctx *Ctx, inst InstanceType, in InputType) OutputType
 
 	// Required: List of test cases.
-	Cases []InstanceCase[InstanceType, FieldsType, InputType, OutputType]
+	Cases []MethodCase[InstanceType, FieldsType, InputType, OutputType]
 
 	// Optional: Function to execute before calling the target function. This is called when no BeforeCall function
 	// is provided by the the case itself.
@@ -91,7 +91,7 @@ type InstanceMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
 }
 
 // Run executes all the test cases in the Mesa instance.
-func (m *InstanceMesa[Inst, F, I, O]) Run(t *testing.T) {
+func (m *MethodMesa[Inst, F, I, O]) Run(t *testing.T) {
 	for _, tt := range m.Cases {
 		t.Run(tt.Name, func(t *testing.T) {
 			if tt.Skip != "" {
@@ -179,7 +179,7 @@ type FunctionMesa[InputType, OutputType any] struct {
 
 // Run executes all the test cases in the FunctionMesa instance.
 func (m *FunctionMesa[I, O]) Run(t *testing.T) {
-	im := InstanceMesa[any, any, I, O]{
+	im := MethodMesa[any, any, I, O]{
 		NewInstance: func(_ *Ctx, _ any) any {
 			return nil
 		},
@@ -206,11 +206,11 @@ func (m *FunctionMesa[I, O]) Run(t *testing.T) {
 			}
 		},
 
-		Cases: make([]InstanceCase[any, any, I, O], len(m.Cases)),
+		Cases: make([]MethodCase[any, any, I, O], len(m.Cases)),
 	}
 
 	for i, c := range m.Cases {
-		im.Cases[i] = InstanceCase[any, any, I, O]{
+		im.Cases[i] = MethodCase[any, any, I, O]{
 			Name:  c.Name,
 			Input: c.Input,
 			Skip:  c.Skip,
