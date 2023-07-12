@@ -1,83 +1,84 @@
 package mesa_test
 
 import (
-	"fmt"
-	"math"
 	"testing"
 
 	"github.com/a20r/mesa"
 )
 
-type Msg struct {
-	Name  string
+type MyStruct struct {
 	Value int
 }
 
-type Buffer struct {
-	msgs  []Msg
-	limit int
+func (s *MyStruct) Add(n int) {
+	s.Value += n
 }
 
-var ErrBufferIsFull = fmt.Errorf("cannot add item: buffer full")
+func ExampleMethodMesa() {
+	//   type MyStruct struct {
+	//     Value int
+	//   }
+	//
+	//   func (s *MyStruct) Add(n int) {
+	// 	   s.Value += n
+	//   }
 
-func (a *Buffer) Add(msg Msg) error {
-	if len(a.msgs) >= a.limit {
-		return ErrBufferIsFull
+	m := mesa.MethodMesa[*MyStruct, int, int, mesa.Empty]{
+		NewInstance: func(ctx *mesa.Ctx, value int) *MyStruct {
+			return &MyStruct{Value: value}
+		},
+		Target: func(ctx *mesa.Ctx, inst *MyStruct, n int) mesa.Empty {
+			inst.Add(n)
+			return nil
+		},
+		Cases: []mesa.MethodCase[*MyStruct, int, int, mesa.Empty]{
+			{
+				Name:   "Add 1 to 0",
+				Fields: 0,
+				Input:  1,
+				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
+					ctx.As.Equal(1, inst.Value)
+				},
+			},
+			{
+				Name:   "Add 2 to 1",
+				Fields: 1,
+				Input:  2,
+				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
+					ctx.As.Equal(3, inst.Value)
+				},
+			},
+		},
 	}
 
-	a.msgs = append(a.msgs, msg)
-	return nil
+	var t *testing.T
+	m.Run(t)
 }
 
-func TestMethodMesa(t *testing.T) {
-	m := mesa.MethodMesa[*Buffer, int, Msg, error]{
-		NewInstance: func(ctx *mesa.Ctx, limit int) *Buffer {
-			return &Buffer{
-				limit: limit,
-			}
+func TestMyStruct_Add(t *testing.T) {
+	m := mesa.MethodMesa[*MyStruct, int, int, mesa.Empty]{
+		NewInstance: func(ctx *mesa.Ctx, value int) *MyStruct {
+			return &MyStruct{Value: value}
 		},
-		Target: func(ctx *mesa.Ctx, inst *Buffer, in Msg) error {
-			return inst.Add(in)
+		Target: func(ctx *mesa.Ctx, inst *MyStruct, n int) mesa.Empty {
+			inst.Add(n)
+			return nil
 		},
-		Cases: []mesa.MethodCase[*Buffer, int, Msg, error]{
+		Cases: []mesa.MethodCase[*MyStruct, int, int, mesa.Empty]{
 			{
-				Name:   "Buffer with limit 10",
-				Fields: 10,
-				Input: Msg{
-					Name:  "test-value",
-					Value: 42,
-				},
-				Check: func(ctx *mesa.Ctx, inst *Buffer, in Msg, out error) {
-					if ctx.As.NoError(out) && ctx.As.Len(inst.msgs, 1) {
-						ctx.As.Equal(in, inst.msgs[0])
-					}
+				Name:   "Add 1 to 0",
+				Fields: 0,
+				Input:  1,
+				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
+					ctx.As.Equal(1, inst.Value)
 				},
 			},
 			{
-				Name:   "Buffer is full",
-				Fields: 10,
-				Input: Msg{
-					Name:  "test-value",
-					Value: 42,
-				},
-				BeforeCall: func(ctx *mesa.Ctx, inst *Buffer, in Msg) {
-					for i := 0; i < inst.limit; i++ {
-						ctx.Re.NoError(inst.Add(in))
-					}
-				},
-				Check: func(ctx *mesa.Ctx, inst *Buffer, in Msg, out error) {
-					if ctx.As.Error(out) {
-						ctx.As.ErrorIs(out, ErrBufferIsFull)
-					}
-				},
-			},
-			{
-				Name:   "Test is skipped",
-				Skip:   "Skipping test because it fails for now",
-				Fields: -1,
-				Input: Msg{
-					Name:  "test-value",
-					Value: 42,
+				Name:   "Add 2 to 1",
+				Fields: 1,
+				Input:  2,
+				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
+					ctx.As.Equal(3, inst.Value)
 				},
 			},
 		},
@@ -86,21 +87,63 @@ func TestMethodMesa(t *testing.T) {
 	m.Run(t)
 }
 
-func PowE(x float64) float64 {
-	return math.Pow(math.E, x)
+func Add(a, b int) int {
+	return a + b
 }
 
-func TestFunctionMesa(t *testing.T) {
-	m := mesa.FunctionMesa[float64, float64]{
-		Target: func(ctx *mesa.Ctx, in float64) float64 {
-			return PowE(in)
+func ExampleFunctionMesa() {
+	//   func Add(a, b int) int {
+	// 	   return a + b
+	//   }
+
+	type input struct{ a, b int }
+
+	m := mesa.FunctionMesa[input, int]{
+		Target: func(ctx *mesa.Ctx, in input) int {
+			return Add(in.a, in.b)
 		},
-		Cases: []mesa.FunctionCase[float64, float64]{
+		Cases: []mesa.FunctionCase[input, int]{
 			{
-				Name:  "pow(e, 1)",
-				Input: 1,
-				Check: func(ctx *mesa.Ctx, in, out float64) {
-					ctx.As.InEpsilon(math.E, out, 0.00001)
+				Name:  "Add 1 and 2",
+				Input: input{a: 1, b: 2},
+				Check: func(ctx *mesa.Ctx, in input, out int) {
+					ctx.As.Equal(3, out)
+				},
+			},
+			{
+				Name:  "Add 0 and 0",
+				Input: input{a: 0, b: 0},
+				Check: func(ctx *mesa.Ctx, in input, out int) {
+					ctx.As.Equal(0, out)
+				},
+			},
+		},
+	}
+
+	var t *testing.T
+	m.Run(t)
+}
+
+func TestAdd(t *testing.T) {
+	type input struct{ a, b int }
+
+	m := mesa.FunctionMesa[input, int]{
+		Target: func(ctx *mesa.Ctx, in input) int {
+			return Add(in.a, in.b)
+		},
+		Cases: []mesa.FunctionCase[input, int]{
+			{
+				Name:  "Add 1 and 2",
+				Input: input{a: 1, b: 2},
+				Check: func(ctx *mesa.Ctx, in input, out int) {
+					ctx.As.Equal(3, out)
+				},
+			},
+			{
+				Name:  "Add 0 and 0",
+				Input: input{a: 0, b: 0},
+				Check: func(ctx *mesa.Ctx, in input, out int) {
+					ctx.As.Equal(0, out)
 				},
 			},
 		},

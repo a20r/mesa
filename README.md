@@ -2,137 +2,143 @@
 [![Go](https://github.com/a20r/mesa/actions/workflows/go.yml/badge.svg)](https://github.com/a20r/mesa/actions/workflows/go.yml)
 [![golangci-lint](https://github.com/a20r/mesa/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/a20r/mesa/actions/workflows/golangci-lint.yml)
 
-Mesa is a package for creating and running table driven tests
+Mesa is a package for creating and running table driven tests in Go.
 
 # Install
 ```
 go get github.com/a20r/mesa
 ```
 
-# Example
+# Usage
 
-## Testing a method
+Mesa provides two types of testing: method testing and function testing.
+
+## Testing methods
+
+Method testing is used to test methods of a struct. To use Mesa for method testing, create a `MethodMesa` instance and define the following:
+
+- `NewInstance`: a function that creates a new instance of the struct being tested
+- `Target`: the method being tested
+- `Cases`: an array of `MethodCase` instances that define the test cases
+- `BeforeCall`: an optional function to execute before calling the target method
+- `Check`: an optional function to check the output of the target method
+- `Cleanup`: an optional function to execute after the test case finishes
+
+
+Each `MethodCase` instance defines the following:
+
+- `Name`: the name of the test case
+- `Fields` or `FieldsFn`: the fields of the struct being tested
+- `Input` or `InputFn`: the input to the method being tested
+- `Skip`: an optional reason to skip the test case
+- [*Override*] `BeforeCall`: an optional function to execute before calling the target method
+- [*Override*] `Check`: an optional function to check the output of the target method
+- [*Override*] `Cleanup`: an optional function to execute after the test case finishes
+
+### Example
 ```go
-package buffer_test
-
-import (
-    "fmt"
-    "testing"
-
-    "github.com/a20r/mesa"
-)
-
-type Msg struct {
-    Name  string
-    Value int
+type MyStruct struct {
+	Value int
 }
 
-type Buffer struct {
-    msgs  []Msg
-    limit int
+func (s *MyStruct) Add(n int) {
+	s.Value += n
 }
 
-var ErrBufferIsFull = fmt.Errorf("cannot add item: buffer full")
+func TestMyStruct_Add(t *testing.T) {
+	m := mesa.MethodMesa[*MyStruct, int, int, mesa.Empty]{
+		NewInstance: func(ctx *mesa.Ctx, value int) *MyStruct {
+			return &MyStruct{Value: value}
+		},
+		Target: func(ctx *mesa.Ctx, inst *MyStruct, n int) mesa.Empty {
+			inst.Add(n)
+			return nil
+		},
+		Cases: []mesa.MethodCase[*MyStruct, int, int, mesa.Empty]{
+			{
+				Name:   "Add 1 to 0",
+				Fields: 0,
+				Input:  1,
+				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
+					ctx.As.Equal(1, inst.Value)
+				},
+			},
+			{
+				Name:   "Add 2 to 1",
+				Fields: 1,
+				Input:  2,
+				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
+					ctx.As.Equal(3, inst.Value)
+				},
+			},
+		},
+	}
 
-func (a *Buffer) Add(msg Msg) error {
-    if len(a.msgs) >= a.limit {
-        return ErrBufferIsFull
-    }
-
-    a.msgs = append(a.msgs, msg)
-    return nil
-}
-
-func TestBuffer_Add(t *testing.T) {
-    m := mesa.MethodMesa[*Buffer, int, Msg, error]{
-        NewInstance: func(ctx *mesa.Ctx, limit int) *Buffer {
-            return &Buffer{
-                limit: limit,
-            }
-        },
-        Target: func(ctx *mesa.Ctx, inst *Buffer, in Msg) error {
-            return inst.Add(in)
-        },
-        Cases: []mesa.MethodCase[*Buffer, int, Msg, error]{
-            {
-                Name:   "Buffer with limit 10",
-                Fields: 10,
-                Input: Msg{
-                    Name:  "test-value",
-                    Value: 42,
-                },
-                Check: func(ctx *mesa.Ctx, inst *Buffer, in Msg, out error) {
-                    if ctx.As.NoError(out) && ctx.As.Len(inst.msgs, 1) {
-                        ctx.As.Equal(in, inst.msgs[0])
-                    }
-                },
-            },
-            {
-                Name:   "Buffer is full",
-                Fields: 10,
-                Input: Msg{
-                    Name:  "test-value",
-                    Value: 42,
-                },
-                BeforeCall: func(ctx *mesa.Ctx, inst *Buffer, in Msg) {
-                    for i := 0; i < inst.limit; i++ {
-                        ctx.Re.NoError(inst.Add(in))
-                    }
-                },
-                Check: func(ctx *mesa.Ctx, inst *Buffer, in Msg, out error) {
-                    if ctx.As.Error(out) {
-                        ctx.As.ErrorIs(out, ErrBufferIsFull)
-                    }
-                },
-            },
-            {
-                Name:   "Test is skipped",
-                Skip:   "Skipping test because it fails for now",
-                Fields: -1,
-                Input: Msg{
-                    Name:  "test-value",
-                    Value: 42,
-                },
-            },
-        },
-    }
-
-    m.Run(t)
+	m.Run(t)
 }
 ```
 
-## Testing a function
+## Testing functions
+Function testing is used to test standalone functions. To use Mesa for function testing, create a `FunctionMesa` instance and define the following:
+
+- `Target`: the function being tested
+- `Cases`: an array of `FunctionCase` instances that define the test cases
+- `BeforeCall`: an optional function to execute before calling the target function
+- `Check`: an optional function to check the output of the target function
+- `Cleanup`: an optional function to execute after the test case finishes
+
+Each `FunctionCase` instance defines the following:
+
+- `Name`: the name of the test case
+- `Input` or `InputFn`: the input to the function being tested
+- `Skip`: an optional reason to skip the test case
+- `Check`: an optional function to check the output of the target function
+- [*Override*] `BeforeCall`: an optional function to execute before calling the target function
+- [*Override*] `Check`: an optional function to check the output of the target function
+- [*Override*] `Cleanup`: an optional function to execute after the test case finishes
+
+
+Note: You can define global `BeforeCall`, `Check`, and `Cleanup` functions in `MethodMesa` and `FunctionMesa`, but you can also override them in individual test cases by defining the same functions in the `MethodCase` or `FunctionCase` instance.
+
+### Example
 ```go
-package pow_test
-
-import (
-    "math"
-    "testing"
-
-    "github.com/a20r/mesa"
-)
-
-func PowE(x float64) float64 {
-    return math.Pow(math.E, x)
+func Add(a, b int) int {
+	return a + b
 }
 
-func TestPowE(t *testing.T) {
-    m := mesa.FunctionMesa[float64, float64]{
-        Target: func(ctx *mesa.Ctx, in float64) float64 {
-            return PowE(in)
-        },
-        Cases: []mesa.FunctionCase[float64, float64]{
-            {
-                Name:  "pow(e, 1)",
-                Input: 1,
-                Check: func(ctx *mesa.Ctx, in, out float64) {
-                    ctx.As.InEpsilon(math.E, out, 0.00001)
-                },
-            },
-        },
-    }
+func TestAdd(t *testing.T) {
+	type input struct{ a, b int }
 
-    m.Run(t)
+	m := mesa.FunctionMesa[input, int]{
+		Target: func(ctx *mesa.Ctx, in input) int {
+			return Add(in.a, in.b)
+		},
+		Cases: []mesa.FunctionCase[input, int]{
+			{
+				Name:  "Add 1 and 2",
+				Input: input{a: 1, b: 2},
+				Check: func(ctx *mesa.Ctx, in input, out int) {
+					ctx.As.Equal(3, out)
+				},
+			},
+			{
+				Name:  "Add 0 and 0",
+				Input: input{a: 0, b: 0},
+				Check: func(ctx *mesa.Ctx, in input, out int) {
+					ctx.As.Equal(0, out)
+				},
+			},
+		},
+	}
+
+	m.Run(t)
 }
-
 ```
+
+# Contributing
+
+Contributions are welcome! Please see the [contributing guidelines](CONTRIBUTING.md) for more information.
+
+# License
+
+Mesa is licensed under the [MIT License](LICENSE).
