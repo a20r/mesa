@@ -1,6 +1,7 @@
 # Mesa
 [![Go](https://github.com/a20r/mesa/actions/workflows/go.yml/badge.svg)](https://github.com/a20r/mesa/actions/workflows/go.yml)
 [![golangci-lint](https://github.com/a20r/mesa/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/a20r/mesa/actions/workflows/golangci-lint.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/a20r/mesa.svg)](https://pkg.go.dev/github.com/a20r/mesa)
 
 Mesa is a package for creating and running table driven tests in Go.
 
