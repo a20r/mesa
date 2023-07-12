@@ -43,11 +43,19 @@ type MethodCase[InstanceType, FieldsType, InputType, OutputType any] struct {
 	// Required: Name of the test case.
 	Name string
 
-	// Required: Fields associated with the instance.
+	// [Required if FieldsFn is not defined] Fields associated with the instance. FieldsFn takes priority over Fields
 	Fields FieldsType
 
-	// Required: Input data for the test case.
+	// [Required if Fields is not defined] FieldsFn returns the fields used for this case. FieldsFn takes priority over
+	// Fields
+	FieldsFn func(ctx *Ctx, in InputType) FieldsType
+
+	// [Required if InputFn is not defined] Input data for the test case. InputFn takes priority over Input.
 	Input InputType
+
+	// [Required if Input is not defined] InputFn returns the input struct used for this case. It takes priority over
+	// the Input field
+	InputFn func(ctx *Ctx) InputType
 
 	// Optional: Reason to skip the test case. The test is only skipped if this field is not empty
 	Skip string
@@ -100,6 +108,14 @@ func (m *MethodMesa[Inst, F, I, O]) Run(t *testing.T) {
 
 			ctx := newCtx(t)
 
+			if tt.InputFn != nil {
+				tt.Input = tt.InputFn(ctx)
+			}
+
+			if tt.FieldsFn != nil {
+				tt.Fields = tt.FieldsFn(ctx, tt.Input)
+			}
+
 			inst := m.NewInstance(ctx, tt.Fields)
 
 			cleanup := func() {}
@@ -137,8 +153,12 @@ type FunctionCase[InputType, OutputType any] struct {
 	// Required: Name of the test case.
 	Name string
 
-	// Required: Input data for the test case.
+	// [Required if InputFn is not defined] Input data for the test case. InputFn takes priority over Input.
 	Input InputType
+
+	// [Required if Input is not defined] InputFn returns the input struct used for this case. It takes priority over
+	// the Input field
+	InputFn func(ctx *Ctx) InputType
 
 	// Optional: Reason to skip the test case. The test is only skipped if this field is not empty
 	Skip string
@@ -211,9 +231,10 @@ func (m *FunctionMesa[I, O]) Run(t *testing.T) {
 
 	for i, c := range m.Cases {
 		im.Cases[i] = MethodCase[any, any, I, O]{
-			Name:  c.Name,
-			Input: c.Input,
-			Skip:  c.Skip,
+			Name:    c.Name,
+			Input:   c.Input,
+			InputFn: c.InputFn,
+			Skip:    c.Skip,
 
 			BeforeCall: func(ctx *Ctx, _ any, in I) {
 				if c.BeforeCall != nil {
