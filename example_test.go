@@ -15,14 +15,6 @@ func (s *MyStruct) Add(n int) {
 }
 
 func ExampleMethodMesa() {
-	//   type MyStruct struct {
-	//     Value int
-	//   }
-	//
-	//   func (s *MyStruct) Add(n int) {
-	// 	   s.Value += n
-	//   }
-
 	m := mesa.MethodMesa[*MyStruct, int, int, mesa.Empty]{
 		NewInstance: func(ctx *mesa.Ctx, value int) *MyStruct {
 			return &MyStruct{Value: value}
@@ -92,10 +84,6 @@ func Add(a, b int) int {
 }
 
 func ExampleFunctionMesa() {
-	//   func Add(a, b int) int {
-	// 	   return a + b
-	//   }
-
 	type input struct{ a, b int }
 
 	m := mesa.FunctionMesa[input, int]{

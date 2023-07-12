@@ -81,6 +81,9 @@ type MethodCase[InstanceType, FieldsType, InputType, OutputType any] struct {
 // MethodMesa represents a collection of test cases and the functions to create instances
 // and execute the target function under test.
 type MethodMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
+	// [Optional] Function to initialize anything before running the test cases
+	Init func(ctx *Ctx)
+
 	// [Required] Function to create a new instance.
 	NewInstance func(ctx *Ctx, fields FieldsType) InstanceType
 
@@ -105,6 +108,10 @@ type MethodMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
 
 // Run executes all the test cases in the Mesa instance.
 func (m *MethodMesa[Inst, F, I, O]) Run(t *testing.T) {
+	if m.Init != nil {
+		m.Init(newCtx(t))
+	}
+
 	for _, tt := range m.Cases {
 		t.Run(tt.Name, func(t *testing.T) {
 			if tt.Skip != "" {
@@ -184,6 +191,9 @@ type FunctionCase[InputType, OutputType any] struct {
 
 // FunctionMesa represents a collection of test cases that execute the target function under each test case.
 type FunctionMesa[InputType, OutputType any] struct {
+	// [Optional] Function to initialize anything before running the test cases
+	Init func(ctx *Ctx)
+
 	// [Required] Target function under test.
 	Target func(ctx *Ctx, in InputType) OutputType
 
@@ -213,6 +223,10 @@ func (m *FunctionMesa[I, O]) Run(t *testing.T) {
 		Cases: make([]MethodCase[any, any, I, O], len(m.Cases)),
 	}
 
+	checkAndSet(&im.Init, m.Init != nil, func(ctx *Ctx) {
+		m.Init(ctx)
+	})
+
 	checkAndSet(&im.Target, m.Target != nil, func(ctx *Ctx, _ any, in I) O {
 		return m.Target(ctx, in)
 	})
@@ -236,24 +250,6 @@ func (m *FunctionMesa[I, O]) Run(t *testing.T) {
 			Input:   c.Input,
 			InputFn: c.InputFn,
 			Skip:    c.Skip,
-
-			BeforeCall: func(ctx *Ctx, _ any, in I) {
-				if c.BeforeCall != nil {
-					c.BeforeCall(ctx, in)
-				}
-			},
-
-			Check: func(ctx *Ctx, _ any, in I, out O) {
-				if c.Check != nil {
-					c.Check(ctx, in, out)
-				}
-			},
-
-			Cleanup: func(ctx *Ctx, _ any) {
-				if c.Cleanup != nil {
-					c.Cleanup(ctx)
-				}
-			},
 		}
 
 		checkAndSet(&im.Cases[i].BeforeCall, c.BeforeCall != nil, func(ctx *Ctx, _ any, in I) {
