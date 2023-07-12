@@ -21,7 +21,6 @@ Method testing is used to test methods of a struct. To use Mesa for method testi
 
 - `Init`: an optional function called before running the test cases
 - `NewInstance`: a function that creates a new instance of the struct being tested
-- `Init`: an optional function called before running the test cases
 - `Target`: the method being tested
 - `Cases`: an array of `MethodCase` instances that define the test cases
 - `BeforeCall`: an optional function to execute before calling the target method
