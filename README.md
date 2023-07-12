@@ -18,13 +18,15 @@ Mesa provides two types of testing: method testing and function testing.
 
 Method testing is used to test methods of a struct. To use Mesa for method testing, create a `MethodMesa` instance and define the following:
 
+- `Init`: an optional function called before running the test cases
 - `NewInstance`: a function that creates a new instance of the struct being tested
+- `Init`: an optional function called before running the test cases
 - `Target`: the method being tested
 - `Cases`: an array of `MethodCase` instances that define the test cases
 - `BeforeCall`: an optional function to execute before calling the target method
 - `Check`: an optional function to check the output of the target method
 - `Cleanup`: an optional function to execute after the test case finishes
-
+- `Teardown`: an optional function called after all cases finish
 
 Each `MethodCase` instance defines the following:
 
@@ -82,11 +84,13 @@ func TestMyStruct_Add(t *testing.T) {
 ## Testing functions
 Function testing is used to test standalone functions. To use Mesa for function testing, create a `FunctionMesa` instance and define the following:
 
+- `Init`: an optional function called before running the test cases
 - `Target`: the function being tested
 - `Cases`: an array of `FunctionCase` instances that define the test cases
 - `BeforeCall`: an optional function to execute before calling the target function
 - `Check`: an optional function to check the output of the target function
 - `Cleanup`: an optional function to execute after the test case finishes
+- `Teardown`: an optional function called after all cases finish
 
 Each `FunctionCase` instance defines the following:
 

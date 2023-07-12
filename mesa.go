@@ -104,12 +104,21 @@ type MethodMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
 	// [Optional] Cleanup function to execute after the test case finishes. This is called when no Cleanup function
 	// is provided by the the case itself.
 	Cleanup func(ctx *Ctx, inst InstanceType)
+
+	// [Optional] Teardown function is called after all cases finish
+	Teardown func(ctx *Ctx)
 }
 
 // Run executes all the test cases in the Mesa instance.
 func (m *MethodMesa[Inst, F, I, O]) Run(t *testing.T) {
+	ctx := newCtx(t)
+
 	if m.Init != nil {
-		m.Init(newCtx(t))
+		m.Init(ctx)
+	}
+
+	if m.Teardown != nil {
+		defer m.Teardown(ctx)
 	}
 
 	for _, tt := range m.Cases {
@@ -211,6 +220,9 @@ type FunctionMesa[InputType, OutputType any] struct {
 	// [Optional] Cleanup function to execute after the test case finishes. This is called when no Cleanup function
 	// is provided by the the case itself.
 	Cleanup func(ctx *Ctx)
+
+	// [Optional] Teardown function is called after all cases finish
+	Teardown func(ctx *Ctx)
 }
 
 // Run executes all the test cases in the FunctionMesa instance.
@@ -241,6 +253,10 @@ func (m *FunctionMesa[I, O]) Run(t *testing.T) {
 
 	checkAndSet(&im.Cleanup, m.Cleanup != nil, func(ctx *Ctx, _ any) {
 		m.Cleanup(ctx)
+	})
+
+	checkAndSet(&im.Teardown, m.Teardown != nil, func(ctx *Ctx) {
+		m.Teardown(ctx)
 	})
 
 	for i, c := range m.Cases {
