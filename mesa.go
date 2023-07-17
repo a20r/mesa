@@ -30,6 +30,11 @@ type ErrorPair[T any] struct {
 	Err   error
 }
 
+// NewErrorPair creates a new error pair with the provided value and error
+func NewErrorPair[T any](value T, err error) ErrorPair[T] {
+	return ErrorPair[T]{Value: value, Err: err}
+}
+
 // Ctx represents the test context containing the testing.T instance
 // and assertion objects for convenience.
 type Ctx struct {
