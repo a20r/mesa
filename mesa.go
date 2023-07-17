@@ -14,6 +14,12 @@ type Mesa interface {
 	Run(t *testing.T)
 }
 
+// Type assertions to ensure Method and Function mesas adhere to interface
+var (
+	_ Mesa = MethodMesa[any, any, any, any]{}
+	_ Mesa = FunctionMesa[any, any]{}
+)
+
 // Run runs the provided test suites.
 func Run(t *testing.T, ms ...Mesa) {
 	for _, m := range ms {
@@ -121,7 +127,7 @@ type MethodMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
 }
 
 // Run executes all the test cases in the Mesa instance.
-func (m *MethodMesa[Inst, F, I, O]) Run(t *testing.T) {
+func (m MethodMesa[Inst, F, I, O]) Run(t *testing.T) {
 	ctx := newCtx(t)
 
 	if m.Init != nil {
@@ -237,7 +243,7 @@ type FunctionMesa[InputType, OutputType any] struct {
 }
 
 // Run executes all the test cases in the FunctionMesa instance.
-func (m *FunctionMesa[I, O]) Run(t *testing.T) {
+func (m FunctionMesa[I, O]) Run(t *testing.T) {
 	im := MethodMesa[any, any, I, O]{
 		NewInstance: func(_ *Ctx, _ any) any {
 			return nil
