@@ -24,6 +24,12 @@ func Run(t *testing.T, ms ...Mesa) {
 // Empty is a type used when testing structs and functions without fields or return values
 type Empty any
 
+// ErrorPair is a convenience type used to wrap function outputs that return a value and an error
+type ErrorPair[T any] struct {
+	Value T
+	Err   error
+}
+
 // Ctx represents the test context containing the testing.T instance
 // and assertion objects for convenience.
 type Ctx struct {
