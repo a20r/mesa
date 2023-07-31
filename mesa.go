@@ -49,6 +49,18 @@ type Ctx struct {
 	Re *require.Assertions
 }
 
+// T returns the underlying testing.T instance if it is being used tests. It will panic if it is being used for
+// benchmarking.
+func (c *Ctx) T() *testing.T {
+	return c.t.(*testing.T)
+}
+
+// B returns the underlying testing.B instance if it is being used for benchmarking. It will panic if it is being used
+// for tests.
+func (c *Ctx) B() *testing.B {
+	return c.t.(*testing.B)
+}
+
 // newCtx creates a new testing context with assert and require instances.
 func newCtx(t require.TestingT) *Ctx {
 	return &Ctx{
