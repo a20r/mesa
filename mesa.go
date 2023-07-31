@@ -44,15 +44,15 @@ func NewErrorPair[T any](value T, err error) ErrorPair[T] {
 // Ctx represents the test context containing the testing.T instance
 // and assertion objects for convenience.
 type Ctx struct {
-	T  *testing.T
+	t  require.TestingT
 	As *assert.Assertions
 	Re *require.Assertions
 }
 
 // newCtx creates a new testing context with assert and require instances.
-func newCtx(t *testing.T) *Ctx {
+func newCtx(t require.TestingT) *Ctx {
 	return &Ctx{
-		T:  t,
+		t:  t,
 		As: assert.New(t),
 		Re: require.New(t),
 	}
@@ -299,6 +299,130 @@ func (m FunctionMesa[I, O]) Run(t *testing.T) {
 	}
 
 	im.Run(t)
+}
+
+// MethodBenchmarkMesa represents a collection of test cases and the functions to create instances
+// and execute the target function under test.
+type MethodBenchmarkMesa[InstanceType, FieldsType, InputType, OutputType any] struct {
+	// [Optional] Function to initialize anything before running the test cases
+	Init func(ctx *Ctx)
+
+	// [Required] Function to create a new instance.
+	NewInstance func(ctx *Ctx, fields FieldsType) InstanceType
+
+	// [Required] Target function under test.
+	Target func(ctx *Ctx, inst InstanceType, in InputType) OutputType
+
+	// [Required] List of test cases.
+	Cases []MethodCase[InstanceType, FieldsType, InputType, OutputType]
+
+	// [Optional] Function to execute before calling the target function. This is called when no BeforeCall function
+	// is provided by the the case itself.
+	BeforeCall func(ctx *Ctx, inst InstanceType, in InputType)
+
+	// [Optional] Cleanup function to execute after the test case finishes. This is called when no Cleanup function
+	// is provided by the the case itself.
+	Cleanup func(ctx *Ctx, inst InstanceType)
+
+	// [Optional] Teardown function is called after all cases finish
+	Teardown func(ctx *Ctx)
+}
+
+// MethodBenchmarkCase represents a benchmark case with its associated properties.
+type MethodBenchmarkCase[InstanceType, FieldsType, InputType, OutputType any] struct {
+	// [Required] Name of the benchmark case.
+	Name string
+
+	// [Optional] Fields associated with the instance. FieldsFn takes priority over Fields. If fields are not needed
+	// to instantiate a the benchmark instance, no fields need to be provided.
+	Fields FieldsType
+
+	// [Optional] FieldsFn returns the fields used for this case. FieldsFn takes priority over Fields. If fields are
+	// not needed to instantiate a the benchmark instance, no fields need to be provided.
+	FieldsFn func(ctx *Ctx, in InputType) FieldsType
+
+	// [Optional] Input data for the benchmark case. InputFn takes priority over Input. The Input field can be empty if the
+	// target function does not take any arguments.
+	Input InputType
+
+	// [Optional] InputFn returns the input struct used for this case. It takes priority over the Input field. This can
+	// be empty if the target function does not take any arguments.
+	InputFn func(ctx *Ctx) InputType
+
+	// [Optional] Reason to skip the benchmark case. The benchmark is only skipped if this field is not empty
+	Skip string
+
+	// [Optional] Function to execute before calling the target function. It will be called instead of the BeforeCall
+	// function in the MethodMesa if provided.
+	BeforeCall func(ctx *Ctx, inst InstanceType, in InputType)
+
+	// [Optional] Cleanup function to execute after the benchmark case finishes. It will be called instead of the Cleanup
+	// function in the MethodMesa if provided.
+	Cleanup func(ctx *Ctx, inst InstanceType)
+}
+
+// Run executes all the benchmark cases in the Mesa instance.
+func (m MethodBenchmarkMesa[Inst, F, I, O]) Run(b *testing.B) {
+	ctx := newCtx(b)
+
+	if m.Init != nil {
+		m.Init(ctx)
+	}
+
+	if m.Teardown != nil {
+		defer m.Teardown(ctx)
+	}
+
+	var result O
+
+	for _, bb := range m.Cases {
+		b.Run(bb.Name, func(b *testing.B) {
+			if bb.Skip != "" {
+				b.Skip(bb.Skip)
+			}
+
+			ctx := newCtx(b)
+
+			if bb.InputFn != nil {
+				bb.Input = bb.InputFn(ctx)
+			}
+
+			if bb.FieldsFn != nil {
+				bb.Fields = bb.FieldsFn(ctx, bb.Input)
+			}
+
+			inst := m.NewInstance(ctx, bb.Fields)
+
+			cleanup := func() {}
+
+			switch {
+			case bb.Cleanup != nil:
+				cleanup = func() { bb.Cleanup(ctx, inst) }
+			case m.Cleanup != nil:
+				cleanup = func() { m.Cleanup(ctx, inst) }
+			}
+
+			b.Cleanup(cleanup)
+
+			switch {
+			case bb.BeforeCall != nil:
+				bb.BeforeCall(ctx, inst, bb.Input)
+			case m.BeforeCall != nil:
+				m.BeforeCall(ctx, inst, bb.Input)
+			}
+
+			var out O
+
+			for i := 0; i < b.N; i++ {
+				innerOut := m.Target(ctx, inst, bb.Input)
+				out = innerOut
+			}
+
+			result = out
+		})
+	}
+
+	var _ = result
 }
 
 func checkAndSet[T any](dst *T, shouldUpdate bool, val T) {
