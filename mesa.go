@@ -432,6 +432,8 @@ func (m MethodBenchmarkMesa[Inst, F, I, O]) Run(b *testing.B) {
 
 			var out O
 
+			b.ResetTimer()
+
 			for i := 0; i < b.N; i++ {
 				innerOut := m.Target(ctx, inst, bb.Input)
 				out = innerOut
