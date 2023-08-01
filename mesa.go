@@ -2,6 +2,7 @@
 package mesa
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,6 +45,7 @@ func NewErrorPair[T any](value T, err error) ErrorPair[T] {
 // Ctx represents the test context containing the testing.T instance
 // and assertion objects for convenience.
 type Ctx struct {
+	context.Context
 	t  require.TestingT
 	As *assert.Assertions
 	Re *require.Assertions
@@ -68,9 +70,10 @@ func (c *Ctx) B() *testing.B {
 // newCtx creates a new testing context with assert and require instances.
 func newCtx(t require.TestingT) *Ctx {
 	return &Ctx{
-		t:  t,
-		As: assert.New(t),
-		Re: require.New(t),
+		Context: context.Background(),
+		t:       t,
+		As:      assert.New(t),
+		Re:      require.New(t),
 	}
 }
 
