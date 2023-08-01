@@ -335,6 +335,10 @@ type MethodBenchmarkMesa[InstanceType, FieldsType, InputType, OutputType any] st
 	// [Required] List of test cases.
 	Cases []MethodBenchmarkCase[InstanceType, FieldsType, InputType, OutputType]
 
+	// [Optional] Function to check the output of the target function. It will be called instead of the Check function
+	// in the MethodMesa if provided.
+	Check func(ctx *Ctx, inst InstanceType, in InputType, out OutputType)
+
 	// [Optional] Function to execute before calling the target function. This is called when no BeforeCall function
 	// is provided by the the case itself.
 	BeforeCall func(ctx *Ctx, inst InstanceType, in InputType)
@@ -367,6 +371,10 @@ type MethodBenchmarkCase[InstanceType, FieldsType, InputType, OutputType any] st
 	// [Optional] InputFn returns the input struct used for this case. It takes priority over the Input field. This can
 	// be empty if the target function does not take any arguments.
 	InputFn func(ctx *Ctx) InputType
+
+	// [Optional] Function to check the output of the target function. It will be called instead of the Check function
+	// in the MethodMesa if provided.
+	Check func(ctx *Ctx, inst InstanceType, in InputType, out OutputType)
 
 	// [Optional] Reason to skip the benchmark case. The benchmark is only skipped if this field is not empty
 	Skip string
@@ -440,6 +448,15 @@ func (m MethodBenchmarkMesa[Inst, F, I, O]) Run(b *testing.B) {
 			}
 
 			result = out
+
+			b.StopTimer()
+
+			switch {
+			case bb.Check != nil:
+				bb.Check(ctx, inst, bb.Input, out)
+			case m.Check != nil:
+				m.Check(ctx, inst, bb.Input, out)
+			}
 		})
 	}
 
