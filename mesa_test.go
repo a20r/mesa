@@ -15,22 +15,16 @@ func BenchmarkTest(b *testing.B) {
 			inst.Add(n)
 			return nil
 		},
-		Cases: []mesa.MethodCase[*MyStruct, int, int, mesa.Empty]{
+		Cases: []mesa.MethodBenchmarkCase[*MyStruct, int, int, mesa.Empty]{
 			{
 				Name:   "Add 1 to 0",
 				Fields: 0,
 				Input:  1,
-				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
-					ctx.As.Equal(1, inst.Value)
-				},
 			},
 			{
 				Name:   "Add 2 to 1",
 				Fields: 1,
 				Input:  2,
-				Check: func(ctx *mesa.Ctx, inst *MyStruct, in int, _ mesa.Empty) {
-					ctx.As.Equal(3, inst.Value)
-				},
 			},
 		},
 	}

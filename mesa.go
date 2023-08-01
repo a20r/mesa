@@ -333,7 +333,7 @@ type MethodBenchmarkMesa[InstanceType, FieldsType, InputType, OutputType any] st
 	Target func(ctx *Ctx, inst InstanceType, in InputType) OutputType
 
 	// [Required] List of test cases.
-	Cases []MethodCase[InstanceType, FieldsType, InputType, OutputType]
+	Cases []MethodBenchmarkCase[InstanceType, FieldsType, InputType, OutputType]
 
 	// [Optional] Function to execute before calling the target function. This is called when no BeforeCall function
 	// is provided by the the case itself.
