@@ -463,6 +463,14 @@ func (m MethodBenchmarkMesa[Inst, F, I, O]) Run(b *testing.B) {
 	var _ = result
 }
 
+// WithCases returns a new instance using the provided cases.
+func (m MethodBenchmarkMesa[Inst, F, I, O]) WithCases(
+	cases []MethodBenchmarkCase[Inst, F, I, O],
+) MethodBenchmarkMesa[Inst, F, I, O] {
+	m.Cases = cases
+	return m
+}
+
 func checkAndSet[T any](dst *T, shouldUpdate bool, val T) {
 	if shouldUpdate {
 		*dst = val
