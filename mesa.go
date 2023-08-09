@@ -95,6 +95,7 @@ func newCtx(t require.TestingT) *Ctx {
 		Context: context.Background(),
 		t:       t,
 		values:  make(map[string]any),
+		metrics: make(map[string]float64),
 		As:      assert.New(t),
 		Re:      require.New(t),
 	}
