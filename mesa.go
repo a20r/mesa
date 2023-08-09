@@ -46,9 +46,11 @@ func NewErrorPair[T any](value T, err error) ErrorPair[T] {
 // and assertion objects for convenience.
 type Ctx struct {
 	context.Context
-	t  require.TestingT
-	As *assert.Assertions
-	Re *require.Assertions
+	t       require.TestingT
+	values  map[string]any
+	metrics map[string]float64
+	As      *assert.Assertions
+	Re      *require.Assertions
 }
 
 // T returns the underlying testing.T instance if it is being used tests. The test will fail if the Ctx is being
@@ -63,8 +65,24 @@ func (c *Ctx) T() *testing.T {
 // the Ctx is being used for tests.
 func (c *Ctx) B() *testing.B {
 	b, ok := c.t.(*testing.B)
-	c.Re.True(ok, "Ctx is being used for a benchmark but you are trying to retrieve the *testing.T instance")
+	c.Re.True(ok, "Ctx is being used for a benchmark but you are trying to retrieve the *testing.B instance")
 	return b
+}
+
+// ReportMetric adds the benchmarking metric with the given name to the context. The metrics are divided by the number
+// of calls (b.N) once the benchmark is complete. It will panic if the context is being used for tests
+func (c *Ctx) ReportMetric(name string, value float64) {
+	c.metrics[name] = value
+}
+
+// SetValue sets a value with the given name in the context
+func (c *Ctx) SetValue(name string, val any) {
+	c.values[name] = val
+}
+
+// GetValue gets a value with the given name from the context
+func (c *Ctx) GetValue(name string) any {
+	return c.values[name]
 }
 
 // newCtx creates a new testing context with assert and require instances.
@@ -72,6 +90,7 @@ func newCtx(t require.TestingT) *Ctx {
 	return &Ctx{
 		Context: context.Background(),
 		t:       t,
+		values:  make(map[string]any),
 		As:      assert.New(t),
 		Re:      require.New(t),
 	}
@@ -450,6 +469,10 @@ func (m MethodBenchmarkMesa[Inst, F, I, O]) Run(b *testing.B) {
 			result = out
 
 			b.StopTimer()
+
+			for name, value := range ctx.metrics {
+				b.ReportMetric(value, name)
+			}
 
 			switch {
 			case bb.Check != nil:
