@@ -72,9 +72,11 @@ func (c *Ctx) B() *testing.B {
 // ReportMetric adds the benchmarking metric with the given name to the context. The metrics are divided by the number
 // of calls (b.N) once the benchmark is complete. It will panic if the context is being used for tests
 func (c *Ctx) ReportMetric(value float64, name string) {
-	_, ok := c.t.(*testing.B)
-	c.Re.True(ok, "Ctx is being used for a test but you are trying to report a metric")
-	c.metrics[name] = value
+	b := c.B()
+	b.StopTimer()
+	defer b.StartTimer()
+
+	c.metrics[name] += value
 }
 
 // SetValue sets a value with the given name in the context
@@ -473,7 +475,7 @@ func (m MethodBenchmarkMesa[Inst, F, I, O]) Run(b *testing.B) {
 			b.StopTimer()
 
 			for name, value := range ctx.metrics {
-				b.ReportMetric(value, name)
+				b.ReportMetric(value/float64(b.N), name)
 			}
 
 			switch {
