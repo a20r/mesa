@@ -65,13 +65,15 @@ func (c *Ctx) T() *testing.T {
 // the Ctx is being used for tests.
 func (c *Ctx) B() *testing.B {
 	b, ok := c.t.(*testing.B)
-	c.Re.True(ok, "Ctx is being used for a benchmark but you are trying to retrieve the *testing.B instance")
+	c.Re.True(ok, "Ctx is being used for a test but you are trying to retrieve the *testing.B instance")
 	return b
 }
 
 // ReportMetric adds the benchmarking metric with the given name to the context. The metrics are divided by the number
 // of calls (b.N) once the benchmark is complete. It will panic if the context is being used for tests
-func (c *Ctx) ReportMetric(name string, value float64) {
+func (c *Ctx) ReportMetric(value float64, name string) {
+	_, ok := c.t.(*testing.B)
+	c.Re.True(ok, "Ctx is being used for a test but you are trying to report a metric")
 	c.metrics[name] = value
 }
 
