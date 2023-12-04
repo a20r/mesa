@@ -112,7 +112,7 @@ type MethodCase[InstanceType, FieldsType, InputType, OutputType any] struct {
 
 	// [Optional] FieldsFn returns the fields used for this case. FieldsFn takes priority over Fields. If fields are
 	// not needed to instantiate a the test instance, no fields need to be provided.
-	FieldsFn func(ctx *Ctx, in InputType) FieldsType
+	FieldsFn func(ctx *Ctx) FieldsType
 
 	// [Optional] Input data for the test case. InputFn takes priority over Input. The Input field can be empty if the
 	// target function does not take any arguments.
@@ -120,7 +120,7 @@ type MethodCase[InstanceType, FieldsType, InputType, OutputType any] struct {
 
 	// [Optional] InputFn returns the input struct used for this case. It takes priority over the Input field. This can
 	// be empty if the target function does not take any arguments.
-	InputFn func(ctx *Ctx) InputType
+	InputFn func(ctx *Ctx, inst InstanceType) InputType
 
 	// [Optional] Reason to skip the test case. The test is only skipped if this field is not empty
 	Skip string
@@ -189,15 +189,15 @@ func (m MethodMesa[Inst, F, I, O]) Run(t *testing.T) {
 
 			ctx := newCtx(t)
 
-			if tt.InputFn != nil {
-				tt.Input = tt.InputFn(ctx)
-			}
-
 			if tt.FieldsFn != nil {
-				tt.Fields = tt.FieldsFn(ctx, tt.Input)
+				tt.Fields = tt.FieldsFn(ctx)
 			}
 
 			inst := m.NewInstance(ctx, tt.Fields)
+
+			if tt.InputFn != nil {
+				tt.Input = tt.InputFn(ctx, inst)
+			}
 
 			cleanup := func() {}
 
@@ -322,10 +322,12 @@ func (m FunctionMesa[I, O]) Run(t *testing.T) {
 	for i, c := range m.Cases {
 		c := c
 		im.Cases[i] = MethodCase[any, any, I, O]{
-			Name:    c.Name,
-			Input:   c.Input,
-			InputFn: c.InputFn,
-			Skip:    c.Skip,
+			Name:  c.Name,
+			Input: c.Input,
+			Skip:  c.Skip,
+			InputFn: func(ctx *Ctx, inst any) I {
+				return c.InputFn(ctx)
+			},
 		}
 
 		checkAndSet(&im.Cases[i].BeforeCall, c.BeforeCall != nil, func(ctx *Ctx, _ any, in I) {
@@ -386,7 +388,7 @@ type MethodBenchmarkCase[InstanceType, FieldsType, InputType, OutputType any] st
 
 	// [Optional] FieldsFn returns the fields used for this case. FieldsFn takes priority over Fields. If fields are
 	// not needed to instantiate a the benchmark instance, no fields need to be provided.
-	FieldsFn func(ctx *Ctx, in InputType) FieldsType
+	FieldsFn func(ctx *Ctx) FieldsType
 
 	// [Optional] Input data for the benchmark case. InputFn takes priority over Input. The Input field can be empty if the
 	// target function does not take any arguments.
@@ -394,7 +396,7 @@ type MethodBenchmarkCase[InstanceType, FieldsType, InputType, OutputType any] st
 
 	// [Optional] InputFn returns the input struct used for this case. It takes priority over the Input field. This can
 	// be empty if the target function does not take any arguments.
-	InputFn func(ctx *Ctx) InputType
+	InputFn func(ctx *Ctx, inst InstanceType) InputType
 
 	// [Optional] Function to check the output of the target function. It will be called instead of the Check function
 	// in the MethodMesa if provided.
@@ -434,15 +436,15 @@ func (m MethodBenchmarkMesa[Inst, F, I, O]) Run(b *testing.B) {
 
 			ctx := newCtx(b)
 
-			if bb.InputFn != nil {
-				bb.Input = bb.InputFn(ctx)
-			}
-
 			if bb.FieldsFn != nil {
-				bb.Fields = bb.FieldsFn(ctx, bb.Input)
+				bb.Fields = bb.FieldsFn(ctx)
 			}
 
 			inst := m.NewInstance(ctx, bb.Fields)
+
+			if bb.InputFn != nil {
+				bb.Input = bb.InputFn(ctx, inst)
+			}
 
 			cleanup := func() {}
 
